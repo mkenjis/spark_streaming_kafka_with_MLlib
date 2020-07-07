@@ -1,0 +1,46 @@
+nohup /usr/local/kafka_2.11/bin/zookeeper-server-start.sh /usr/local/kafka_2.11/config/zookeeper.properties &
+
+/usr/local/kafka_2.11/bin/kafka-server-start.sh /usr/local/kafka_2.11/config/server.properties > /usr/local/kafka_2.11/kafka.log 2>&1 &
+
+To create a topic : kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic test
+To list topics : kafka-topics.sh --list --zookeeper $KAFKAZKHOSTS
+To delete a topic : kafka-topics.sh --delete --topic topicname --zookeeper $KAFKAZKHOSTS
+
+
+echo "Hello, World" | kafka-console-producer.sh --broker-list localhost:9092 --topic test > /dev/null
+echo "$(date)" | kafka-console-producer.sh --broker-list localhost:9092 --topic test > /dev/null
+
+kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic test --from-beginning
+
+
+spark-shell --packages org.apache.spark:spark-sql-kafka-0-10_2.11:2.3.2,org.apache.spark:spark-streaming-kafka-0-10_2.11:2.3.2
+  ou
+spark-shell --jars spark-sql-kafka-0-10_2.11-2.3.2.jar,spark-streaming-kafka-0-10_2.11-2.3.2.jar
+
+-------------------------------
+
+kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic saida
+
+val query = dataFrame.selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)").writeStream.format("kafka").outputMode("complete").option("kafka.bootstrap.servers", "localhost:9092").option("topic", "saida").option("checkpointLocation", "/home/ubuntu/checkpoint/streaming").start().awaitTermination()
+
+kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic saida --from-beginning
+
+---------------------------------
+
+kafka-topics.sh --create --zookeeper kfk0:2181,kfk1:2181,kfk2:2181 --replication-factor 2 --partitions 1 --topic test
+
+kafka-console-producer.sh --broker-list kfk0:9092,kfk1:9092,kfk2:9092 --topic test
+
+kafka-console-consumer.sh --bootstrap-server kfk0:9092,kfk1:9092,kfk2:9092 --topic test --from-beginning
+
+---------------------------------
+
+val dataFrame = spark.readStream.format("kafka").option("kafka.bootstrap.servers", "localhost:9092").option("subscribe", "test").load()
+
+dataFrame.printSchema()
+
+dataFrame.selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)").writeStream.outputMode("append").format("console").start().awaitTermination()
+
+dataFrame.selectExpr("CAST(key AS STRING)", "CAST(value AS STRING) as value").groupBy("value").count().writeStream.outputMode("complete").format("console").start().awaitTermination()
+
+dataFrame.selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)").writeStream.outputMode("append").format("parquet").option("path", "custResult.parquet").option("checkpointLocation", "/home/ubuntu/checkpoint/streaming").start().awaitTermination()

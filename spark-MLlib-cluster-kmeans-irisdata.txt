@@ -1,0 +1,73 @@
+
+The following example code uses the KMeans object to train a KMeansModel.
+
+import org.apache.spark.mllib.clustering.KMeans
+import org.apache.spark.mllib.linalg.Vectors
+// Load data
+val lines = sc.textFile("data/mllib/kmeans_data.txt")
+// Convert each text line into an array of Double
+val arraysOfDoubles = lines.map{line => line.split(' ').map(_.toDouble)}
+// Transform the parsed data into a RDD[Vector]
+val vectors = arraysOfDoubles.map{a => Vectors.dense(a)}.cache()
+val numClusters = 2
+val numIterations = 20
+// Train a KMeansModel
+val kMeansModel = KMeans.train(vectors, numClusters, numIterations)
+
+
+The following example code uses an instance of the KMeans class to train a KMeansModel.
+import org.apache.spark.mllib.clustering.KMeans
+import org.apache.spark.mllib.linalg.Vectors
+// Load data
+val lines = sc.textFile("data/mllib/kmeans_data.txt")
+// Convert each text line into an array of Double
+val arraysOfDoubles = lines.map{line => line.split(' ').map(_.toDouble)}
+// Transform the parsed data into a RDD[Vector]
+val vectors = arraysOfDoubles.map{a => Vectors.dense(a)}.cache()
+val numClusters = 2
+val numIterations = 20
+// Create an instance of the KMeans class and set the hyperparameters
+val kMeans = new KMeans().setMaxIterations(numIterations).setK(numClusters)
+// Train a KMeansModel
+val kMeansModel = kMeans.run(vectors)
+
+
+predict
+The predict method returns a cluster index for a given observation. It takes a Vector as an argument and
+returns a value of type Int.
+The following example code determines the cluster indices for a couple of observation using
+the KMeansModel trained earlier.
+val obs1 = Vectors.dense(0.0, 0.0, 0.0)
+val obs2 = Vectors.dense(9.0, 9.0, 9.0)
+val clusterIndex1 = kMeansModel.predict(obs1)
+clusterIndex1: Int = 1
+val clusterIndex2 = kMeansModel.predict(obs2)
+clusterIndex2: Int = 0
+
+A variant of the predict method maps a list of observations to their cluster indices. It takes an RDD of
+Vector as argument and returns an RDD of Int.
+The following example code calculates the cluster indices for all the training data that we used to train a
+KMeansModel earlier.
+val clusterIndicesRDD = kMeansModel.predict(vectors)
+val clusterIndices = clusterIndicesRDD.collect()
+clusterIndices: Array[Int] = Array(1, 1, 1, 0, 0, 0)
+
+computeCost
+The computeCost method returns the sum of the squared distances of the observations from their nearest
+cluster centers. It can be used to evaluate a KMeans model.
+// Compute Within Set Sum of Squared Errors
+val WSSSE = kMeansModel.computeCost(vectors)
+WSSSE: Double = 0.11999999999994547
+
+save
+The save method persists a trained clustering model to disk. It takes a SparkContext and path as arguments
+and saves the source model to the given path. The saved model can be later read with the load method.
+kMeansModel.save(sc, "models/kmean")
+
+load
+The load method is defined in the companion model objects. It generates an instance of a model from a
+previously saved model. It takes a SparkContext and the path to a saved model and returns an instance of a
+clustering model.
+
+import org.apache.spark.mllib.clustering.KMeansModel
+val savedKMeansModel = KMeansModel.load(sc, "models/kmean")
